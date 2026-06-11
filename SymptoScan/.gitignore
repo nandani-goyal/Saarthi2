@@ -1,0 +1,28 @@
+# dependencies
+
+node_modules/
+venv/
+.env
+
+# Python
+
+**pycache**/
+\*.pyc
+
+# Build folders
+
+dist/
+build/
+
+# VS Code
+
+.vscode/
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Logs
+
+\*.log
