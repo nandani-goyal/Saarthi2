@@ -53,7 +53,7 @@ const SchemeCard: React.FC<SchemeCardProps> = ({
         </div>
       </div>
       
-      <p className="text-muted-foreground mb-4">{description}</p>
+      {/* <p className="text-muted-foreground mb-4">{description}</p> */}
       
       <div className="space-y-2 mb-4">
         {benefits.slice(0, 3).map((benefit, index) => (

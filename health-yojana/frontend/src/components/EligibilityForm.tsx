@@ -6,30 +6,54 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Sparkles } from 'lucide-react';
+import { getEligibleSchemes } from "@/lib/schemeService";
+import { useNavigate } from "react-router-dom";
 
 interface EligibilityFormProps {
   onSubmit: (formData: any) => void;
 }
 
+
 const EligibilityForm: React.FC<EligibilityFormProps> = ({ onSubmit }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     age: '',
     income: '',
     familySize: '',
     pregnant: false,
-    lactating: false,
+    breastfeeding: false,
     hasHealthInsurance: false,
     state: '',
     district: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
+  const handleSubmit = async () => {
+  const formattedData = {
+  ...formData,
+  age: Number(formData.age),
+  state: formData.state
+    ?.toLowerCase()
+    .replace(/\s+/g, "_"), 
+     pregnant: formData.pregnant === true,
+     breastfeeding: formData.breastfeeding === true,
+    hasInsurance: formData.hasHealthInsurance === true
+};
+  console.log("FORM DATA:", formattedData);
+
+  const schemes = await getEligibleSchemes(formattedData);
+
+  console.log("SCHEMES:", schemes);
+
+  localStorage.setItem("schemes", JSON.stringify(schemes));
+
+  onSubmit(formattedData);
+
+  navigate("/");
+};
 
   return (
+    
     <div className="w-full max-w-6xl mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         {/* Left side - Woman image */}
@@ -176,8 +200,8 @@ const EligibilityForm: React.FC<EligibilityFormProps> = ({ onSubmit }) => {
                   <div className="flex items-center space-x-2">
                     <Checkbox 
                       id="lactating"
-                      checked={formData.lactating}
-                      onCheckedChange={(checked) => setFormData({ ...formData, lactating: checked as boolean })}
+                      checked={formData.breastfeeding}
+                      onCheckedChange={(checked) => setFormData({ ...formData, breastfeeding: checked as boolean })}
                     />
                     <Label htmlFor="lactating" className="text-sm">Currently Breastfeeding</Label>
                   </div>

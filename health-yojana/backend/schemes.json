@@ -1,0 +1,120 @@
+[
+  {
+    "name": "M.P. Maternity Support Scheme (Naya Savera)",
+    "eligibility": {
+      "gender": "female",
+      "pregnant": true,
+      "state": "madhya_pradesh"
+    },
+    "benefits": ["₹4,000 in last trimester", "₹12,000 after delivery"]
+  },
+  {
+    "name": "Mukhya Mantri Shramik Seva Prasuti Sahayata Yojana",
+    "eligibility": {
+      "gender": "female",
+      "pregnant": true,
+      "state": "madhya_pradesh"
+    },
+    "benefits": ["₹4,000 during pregnancy", "₹12,000 post-delivery support"]
+  },
+  {
+    "name": "Pradhan Mantri Matru Vandana Yojana (PMMVY)",
+    "eligibility": {
+      "gender": "female",
+      "pregnant": true,
+      "age_min": 19,
+      "state": "madhya_pradesh"
+    },
+    "benefits": ["₹1,000 on registration", "₹2,000 during pregnancy", "₹2,000 after childbirth"]
+  },
+  {
+    "name": "Janani Suraksha Yojana",
+    "eligibility": {
+      "gender": "female",
+      "breastfeeding": true,
+      "age_min": 19
+    },
+    "benefits": ["Cash incentive for institutional delivery"]
+  },
+
+  {
+    "name": "Mukhyamantri Suposhan Nutri-Kit Yojana",
+    "eligibility": {
+      "gender": "female",
+      "hasHealthInsurance": true,
+      "state": "rajasthan"
+    },
+    "benefits": ["Nutri kit with ghee, dates, makhana"]
+  },
+  {
+    "name": "Indira Gandhi Matritva Poshan Yojana",
+    "eligibility": {
+      "gender": "female",
+      "hasHealthInsurance": true,
+      "state": "rajasthan"
+    },
+    "benefits": ["₹6,000 in installments"]
+  },
+  {
+    "name": "Janani Shishu Suraksha Karyakram",
+    "eligibility": {
+      "gender": "female",
+      "pregnant": true,
+      "age_min":19
+    },
+    "benefits": ["Free delivery", "Free transport", "Free medicines"]
+  },
+  {
+    "name": "Janani Suraksha Yojana (JSY)",
+    "eligibility": {
+      "gender": "female",
+      "pregnant": true
+    },
+    "benefits": ["₹1400 rural / ₹1000 urban incentive"]
+  },
+
+  {
+    "name": "Vandan Matru Yojana",
+    "eligibility": {
+      "gender": "female",
+      "pregnant": true,
+      "state": "gujarat"
+    },
+    "benefits": ["Nutrition kit", "Prenatal care"]
+  },
+  {
+    "name": "Maternity Assistance Scheme (Construction Workers)",
+    "eligibility": {
+      "gender": "female",
+      "pregnant": true,
+      "occupation": "construction_worker"
+    },
+    "benefits": ["₹37,500 assistance"]
+  },
+  {
+    "name": "Mukhyamantri Matrushakti Yojana",
+    "eligibility": {
+      "gender": "female",
+      "pregnant": true,
+      "state": "gujarat"
+    },
+    "benefits": ["Food support every month"]
+  },
+  {
+    "name": "Poshan Sudha Yojana",
+    "eligibility": {
+      "gender": "female",
+      "pregnant": true,
+      "state": "gujarat"
+    },
+    "benefits": ["Hot meal", "Supplements"]
+  },
+
+  {
+    "name": "Women Health Card",
+    "eligibility": {
+      "gender": "female"
+    },
+    "benefits": ["Health tracking", "Priority services"]
+  }
+]

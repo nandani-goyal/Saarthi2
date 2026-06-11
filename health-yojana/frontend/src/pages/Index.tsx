@@ -11,19 +11,37 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Clock, Package } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { stateSchemes } from '@/lib/stateSchemes';
+// import { stateSchemes } from '@/lib/stateSchemes';
+import { useEffect } from 'react';
 
+
+const handleSchemeDetails = (id: number) => {
+  console.log("Viewing scheme:", id);
+};
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [userData, setUserData] = useState<any>(null); // Stores form data
+  const [userData, setUserData] = useState<any>(null);
   const [recommendedSchemes, setRecommendedSchemes] = useState<any[]>([]);
 
-  const handleSchemeDetails = (schemeId: number) => {
-    toast({
-      title: "Scheme Details",
-      description: "Redirecting to detailed information and application process.",
-    });
-  };
+  // ✅ LOAD FROM localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("schemes");
+
+    if (stored) {
+      const parsed = JSON.parse(stored);
+
+      const formatted = parsed.map((scheme: any, index: number) => ({
+        id: index,
+        title: scheme.name,
+        description: scheme.benefits?.join(", "),
+        benefits: scheme.benefits,
+        eligibilityMatch: scheme.score,
+        category: "health"
+      }));
+
+      setRecommendedSchemes(formatted);
+    }
+  }, []);
 
   const handleEligibilitySubmit = (formData: any) => {
     console.log('Form submitted:', formData);
@@ -32,18 +50,19 @@ const Index = () => {
       description: "We've updated your recommendations based on your information.",
     });
     
-    const filteredSchemes = stateSchemes[formData.state] || [];
-    setRecommendedSchemes(filteredSchemes);
+    // const filteredSchemes = stateSchemes[formData.state] || [];
+    // setRecommendedSchemes(filteredSchemes);
     setActiveTab('dashboard');
   };
-
+  
   const renderDashboard = () => (
     <div className="space-y-6">
       <WelcomeBanner onStartJourney={() => setActiveTab('eligibility')} />
       <AutoMatchSummary />
-
+      
       <div>
         <h2 className="text-2xl font-bold mb-6">Recommended Schemes for You</h2>
+        
         
         {recommendedSchemes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -181,3 +200,25 @@ const Index = () => {
 };
 
 export default Index;
+
+
+// const [schemes, setSchemes] = useState([]);
+// useEffect(() => {
+//   const stored = localStorage.getItem("schemes");
+
+//   if (stored) {
+//     const parsed = JSON.parse(stored);
+
+//     // map backend data → your UI format
+//     const formatted = parsed.map((scheme: any, index: number) => ({
+//       id: index,
+//       title: scheme.name,
+//       description: scheme.benefits?.join(", "),
+//       benefits: scheme.benefits,
+//       eligibilityMatch: "Eligible", // you can improve later
+//       category: "Health"
+//     }));
+
+//     setRecommendedSchemes(formatted);
+//   }
+// }, []);
