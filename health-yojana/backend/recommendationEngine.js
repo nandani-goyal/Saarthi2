@@ -1,6 +1,6 @@
-const schemes = require("./schemes.json");
-
-function calculateMatches(user) {
+async function calculateMatches(user) {
+  const { fetchSchemes } = require("./services/schemeService");
+  const schemes = await fetchSchemes();
   const results = [];
 
   schemes.forEach((scheme) => {

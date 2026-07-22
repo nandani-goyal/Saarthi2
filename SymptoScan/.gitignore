@@ -1,28 +1,98 @@
-# dependencies
+# # dependencies
 
-node_modules/
-venv/
+# node_modules/
+# venv/
+# .env
+
+# # Python
+
+# **pycache**/
+# \*.pyc
+
+# # Build folders
+
+# dist/
+# build/
+
+# # VS Code
+
+# .vscode/
+
+# # OS files
+
+# .DS_Store
+# Thumbs.db
+
+# # Logs
+
+# \*.log
+
+# backend/app/__pycache__
+# *.pyc
+
+# ==========================================
+# Credentials & Environment Settings (CRITICAL)
+# ==========================================
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+venv/
+.venv/
+env/
+ENV/
 
-# Python
+# ==========================================
+# Dependencies & Package Managers
+# ==========================================
+node_modules/
+/jspm_packages/
+.npm
+.eslintcache
+package-lock.json.log
 
-**pycache**/
-\*.pyc
+# ==========================================
+# Python Compilation & Caches
+# ==========================================
+__pycache__/
+backend/app/__pycache__
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
-# Build folders
-
+# ==========================================
+# Production Builds & Bundlers
+# ==========================================
 dist/
 build/
+out/
+.cache/
+.parcel-cache/
 
-# VS Code
-
+# ==========================================
+# Editor / IDE Configs
+# ==========================================
 .vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
 
-# OS files
-
+# ==========================================
+# OS Files & Logs
+# ==========================================
 .DS_Store
+.DS_Store?
+[Dd]esktop.ini
 Thumbs.db
-
-# Logs
-
-\*.log
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

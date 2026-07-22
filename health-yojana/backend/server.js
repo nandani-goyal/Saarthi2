@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
 
@@ -8,7 +9,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const schemes = require("./schemes.json");
+// const schemes = require("./schemes.json"); // removed – data now fetched from government API
 
 function isEligible(user, scheme) {
   const e = scheme.eligibility;
@@ -42,30 +43,33 @@ function calculateScore(user, scheme) {
 
   return Math.round((matched / total) * 100);
 }
-app.post("/get-schemes", (req, res) => {
+app.post("/get-schemes", async (req, res) => {
   const userData = req.body;
-
-  const scoredSchemes = schemes
-    .map((scheme) => ({
-      ...scheme,
-      score: calculateScore(userData, scheme)
-    }))
-    .filter((scheme) => scheme.score > 50)
-    .sort((a, b) => b.score - a.score);
-
-  res.json({
-    schemes: scoredSchemes
-  });
+  try {
+    const { fetchSchemes } = require("./services/schemeService");
+    const schemes = await fetchSchemes();
+    const scoredSchemes = schemes
+      .map((scheme) => ({
+        ...scheme,
+        score: calculateScore(userData, scheme)
+      }))
+      .sort((a, b) => b.score - a.score);
+    res.json({ schemes: scoredSchemes });
+  } catch (err) {
+    console.error("Error fetching schemes:", err);
+    res.status(503).json({ error: "Unable to retrieve schemes at this time." });
+  }
 });
 
 app.listen(3000, () => console.log("Server running on port 3000"));
 
-app.post("/recommend", (req, res) => {
-
-  const recommendations =
-    calculateMatches(req.body);
-
-  res.json(recommendations);
-
+app.post("/recommend", async (req, res) => {
+  try {
+    const recommendations = await calculateMatches(req.body);
+    res.json(recommendations);
+  } catch (err) {
+    console.error("Recommendation error:", err);
+    res.status(503).json({ error: "Recommendation service unavailable." });
+  }
 });
 

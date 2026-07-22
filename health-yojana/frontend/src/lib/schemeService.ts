@@ -7,8 +7,16 @@ export const getEligibleSchemes = async (userData: any) => {
     body: JSON.stringify(userData),
   });
 
+  if (!res.ok) {
+    const err = await res.text();
+    console.log(err);
+    throw new Error(err);
+  }
+
   const data = await res.json();
-  return data.schemes;
+  console.log(data);
+
+  return data.schemes ?? [];
 };
 
 export const getRecommendations =

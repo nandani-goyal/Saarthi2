@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getEligibleSchemes } from '@/lib/schemeService';
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 import WelcomeBanner from '@/components/WelcomeBanner';
@@ -23,36 +24,33 @@ const Index = () => {
   const [userData, setUserData] = useState<any>(null);
   const [recommendedSchemes, setRecommendedSchemes] = useState<any[]>([]);
 
-  // ✅ LOAD FROM localStorage
+  // No initial scheme loading; recommendations will appear after eligibility submission
   useEffect(() => {
-    const stored = localStorage.getItem("schemes");
-
-    if (stored) {
-      const parsed = JSON.parse(stored);
-
-      const formatted = parsed.map((scheme: any, index: number) => ({
-        id: index,
-        title: scheme.name,
-        description: scheme.benefits?.join(", "),
-        benefits: scheme.benefits,
-        eligibilityMatch: scheme.score,
-        category: "health"
-      }));
-
-      setRecommendedSchemes(formatted);
-    }
+    // intentionally left blank
   }, []);
 
-  const handleEligibilitySubmit = (formData: any) => {
-    console.log('Form submitted:', formData);
-    toast({
-      title: "Profile Updated!",
-      description: "We've updated your recommendations based on your information.",
-    });
-    
-    // const filteredSchemes = stateSchemes[formData.state] || [];
-    // setRecommendedSchemes(filteredSchemes);
-    setActiveTab('dashboard');
+  const handleEligibilitySubmit = async (formData: any) => {
+    try {
+      // Use the shared service to fetch eligible schemes based on user data
+      const schemes = await getEligibleSchemes(formData);
+      // The service returns an array of schemes
+      const formatted = schemes.map((scheme: any, index: number) => ({
+        id: index,
+        title: scheme.name,
+        description: scheme.description || scheme.benefits?.join(", "),
+        benefits: scheme.benefits,
+        eligibilityMatch: scheme.score || "90%",
+        category: scheme.category || "health",
+      }));
+      setRecommendedSchemes(formatted);
+      toast({
+        title: "Profile Updated!",
+        description: "We've updated your recommendations based on your information.",
+      });
+      setActiveTab('dashboard');
+    } catch (error) {
+      console.error("Error submitting eligibility:", error);
+    }
   };
   
   const renderDashboard = () => (

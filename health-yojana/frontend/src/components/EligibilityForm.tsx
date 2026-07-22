@@ -28,29 +28,27 @@ const EligibilityForm: React.FC<EligibilityFormProps> = ({ onSubmit }) => {
     district: ''
   });
 
-  const handleSubmit = async () => {
-  const formattedData = {
-  ...formData,
-  age: Number(formData.age),
-  state: formData.state
-    ?.toLowerCase()
-    .replace(/\s+/g, "_"), 
-     pregnant: formData.pregnant === true,
-     breastfeeding: formData.breastfeeding === true,
-    hasInsurance: formData.hasHealthInsurance === true
-};
-  console.log("FORM DATA:", formattedData);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formattedData = {
+      ...formData,
+      age: Number(formData.age),
+      state: formData.state
+        ?.toLowerCase()
+        .replace(/\s+/g, "_"),
+      pregnant: formData.pregnant === true,
+      breastfeeding: formData.breastfeeding === true,
+      hasHealthInsurance: formData.hasHealthInsurance === true,
+    };
+    console.log("FORM DATA:", formattedData);
 
-  const schemes = await getEligibleSchemes(formattedData);
-
-  console.log("SCHEMES:", schemes);
-
-  localStorage.setItem("schemes", JSON.stringify(schemes));
-
-  onSubmit(formattedData);
-
-  navigate("/");
-};
+    const schemes = await getEligibleSchemes(formattedData);
+    console.log("SCHEMES:", schemes);
+    localStorage.setItem("schemes", JSON.stringify(schemes));
+    onSubmit(formattedData);
+    // navigate to home to display results (optional)
+    // navigate("/"); // removed to keep current view and state
+  };
 
   return (
     
