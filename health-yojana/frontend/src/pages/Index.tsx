@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getEligibleSchemes } from '@/lib/schemeService';
+import { useSchemesMutation } from '@/hooks/useSchemesMutation';
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 import WelcomeBanner from '@/components/WelcomeBanner';
@@ -10,58 +10,106 @@ import HelpResources from '@/components/HelpResources';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Clock, Package } from 'lucide-react';
+import { CheckCircle, Clock, Package, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-// import { stateSchemes } from '@/lib/stateSchemes';
-import { useEffect } from 'react';
-
 
 const handleSchemeDetails = (id: number) => {
   console.log("Viewing scheme:", id);
 };
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [userData, setUserData] = useState<any>(null);
   const [recommendedSchemes, setRecommendedSchemes] = useState<any[]>([]);
 
-  // No initial scheme loading; recommendations will appear after eligibility submission
-  useEffect(() => {
-    // intentionally left blank
-  }, []);
+  /**
+   * useSchemesMutation gives us three important values:
+   *   - mutateAsync  → call this to trigger the actual API request
+   *   - isPending    → true while the request is running (show a spinner)
+   *   - isError      → true if the request failed (show an error banner)
+   *   - error        → the error object containing a message
+   *   - reset        → clears the error so the user can try again
+   */
+  const { mutateAsync, isPending, isError, error, reset } = useSchemesMutation();
 
   const handleEligibilitySubmit = async (formData: any) => {
+    // Clear any previous error before starting a new attempt
+    reset();
+
     try {
-      // Use the shared service to fetch eligible schemes based on user data
-      const schemes = await getEligibleSchemes(formData);
-      // The service returns an array of schemes
+      // mutateAsync runs getEligibleSchemes and handles retries automatically
+      const schemes = await mutateAsync(formData);
+
+      // Map backend scheme shape → UI card shape
       const formatted = schemes.map((scheme: any, index: number) => ({
         id: index,
         title: scheme.name,
         description: scheme.description || scheme.benefits?.join(", "),
         benefits: scheme.benefits,
-        eligibilityMatch: scheme.score || "90%",
+        eligibilityMatch: scheme.score,
         category: scheme.category || "health",
       }));
+
       setRecommendedSchemes(formatted);
       toast({
-        title: "Profile Updated!",
-        description: "We've updated your recommendations based on your information.",
+        title: "Schemes Found!",
+        description: `We found ${formatted.length} scheme(s) for you.`,
       });
       setActiveTab('dashboard');
-    } catch (error) {
-      console.error("Error submitting eligibility:", error);
+    } catch (err) {
+      // isError will automatically be set to true by React Query.
+      // We don't need to do anything here – the UI will handle it below.
+      console.error("Eligibility submission failed:", err);
     }
   };
-  
+
+  // ----------------------------------------------------------------
+  // Re-usable Loading Spinner component (inline, no extra file needed)
+  // ----------------------------------------------------------------
+  const LoadingOverlay = () => (
+    <div className="flex flex-col items-center justify-center py-16 space-y-4">
+      <Loader2 className="w-12 h-12 text-primary animate-spin" />
+      <p className="text-lg font-medium text-muted-foreground">
+        Finding the best schemes for you…
+      </p>
+      <p className="text-sm text-muted-foreground">
+        This usually takes a second or two.
+      </p>
+    </div>
+  );
+
+  // ----------------------------------------------------------------
+  // Re-usable Error Banner component
+  // ----------------------------------------------------------------
+  const ErrorBanner = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
+    <div className="flex flex-col items-center justify-center py-12 space-y-6">
+      <div className="flex items-center space-x-3 p-4 bg-red-50 border border-red-200 rounded-xl max-w-lg w-full">
+        <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
+        <div>
+          <p className="font-semibold text-red-700">Something went wrong</p>
+          <p className="text-sm text-red-600 mt-1">{message}</p>
+        </div>
+      </div>
+      <Button
+        variant="outline"
+        onClick={onRetry}
+        className="border-red-300 text-red-600 hover:bg-red-50"
+      >
+        Try Again
+      </Button>
+    </div>
+  );
+
+  // ----------------------------------------------------------------
+  // Dashboard Tab
+  // ----------------------------------------------------------------
   const renderDashboard = () => (
     <div className="space-y-6">
       <WelcomeBanner onStartJourney={() => setActiveTab('eligibility')} />
       <AutoMatchSummary />
-      
+
       <div>
         <h2 className="text-2xl font-bold mb-6">Recommended Schemes for You</h2>
-        
-        
+
         {recommendedSchemes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {recommendedSchemes.map((scheme) => (
@@ -77,24 +125,51 @@ const Index = () => {
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground">Please fill the eligibility form to see personalized recommendations.</p>
+          <p className="text-muted-foreground">
+            Please fill the eligibility form to see personalized recommendations.
+          </p>
         )}
       </div>
     </div>
   );
 
-  const renderEligibility = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-4">Find Your Perfect Health Schemes</h2>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Answer a few questions and we'll match you with government schemes that can support your health, nutrition, and welfare needs.
-        </p>
-      </div>
-      <EligibilityForm onSubmit={handleEligibilitySubmit} />
-    </div>
-  );
+  // ----------------------------------------------------------------
+  // Eligibility Tab – shows loading/error/form based on state
+  // ----------------------------------------------------------------
+  const renderEligibility = () => {
+    // While the API call is in-flight, show a spinner instead of the form
+    if (isPending) return <LoadingOverlay />;
 
+    // If the API call failed, show an error banner with a retry button
+    if (isError) {
+      return (
+        <ErrorBanner
+          message={error?.message || "Unknown error. Please check if the backend is running."}
+          onRetry={() => {
+            reset();              // clear the error in React Query
+            setActiveTab('eligibility'); // stay on this tab so user can re-submit
+          }}
+        />
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold mb-4">Find Your Perfect Health Schemes</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Answer a few questions and we'll match you with government schemes that can
+            support your health, nutrition, and welfare needs.
+          </p>
+        </div>
+        <EligibilityForm onSubmit={handleEligibilitySubmit} isLoading={isPending} />
+      </div>
+    );
+  };
+
+  // ----------------------------------------------------------------
+  // Tracker Tab
+  // ----------------------------------------------------------------
   const renderTracker = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -105,13 +180,13 @@ const Index = () => {
       </div>
 
       <div className="flex justify-center mb-8">
-        <img 
+        <img
           src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=200&fit=crop&crop=center"
           alt="Woman tracking her benefits and applications"
           className="w-full max-w-md h-40 object-cover rounded-xl shadow-lg"
         />
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-3">
@@ -174,21 +249,16 @@ const Index = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'eligibility':
-        return renderEligibility();
-      case 'tracker':
-        return renderTracker();
-      case 'help':
-        return renderHelp();
-      default:
-        return renderDashboard();
+      case 'eligibility': return renderEligibility();
+      case 'tracker':     return renderTracker();
+      case 'help':        return renderHelp();
+      default:            return renderDashboard();
     }
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
       <div className="container mx-auto px-4 py-8">
         <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
         {renderContent()}
@@ -198,25 +268,3 @@ const Index = () => {
 };
 
 export default Index;
-
-
-// const [schemes, setSchemes] = useState([]);
-// useEffect(() => {
-//   const stored = localStorage.getItem("schemes");
-
-//   if (stored) {
-//     const parsed = JSON.parse(stored);
-
-//     // map backend data → your UI format
-//     const formatted = parsed.map((scheme: any, index: number) => ({
-//       id: index,
-//       title: scheme.name,
-//       description: scheme.benefits?.join(", "),
-//       benefits: scheme.benefits,
-//       eligibilityMatch: "Eligible", // you can improve later
-//       category: "Health"
-//     }));
-
-//     setRecommendedSchemes(formatted);
-//   }
-// }, []);

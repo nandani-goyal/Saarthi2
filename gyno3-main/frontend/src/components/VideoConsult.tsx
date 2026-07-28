@@ -9,7 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 import BookingModal from "./BookingModal";
 
 const VideoConsult = () => {
-  const [symptoms, setSymptoms] = useState("");
+  const [symptoms, setSymptoms] = useState(() => {
+    return localStorage.getItem("gyno_latest_symptoms") || "";
+  });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -178,10 +180,10 @@ const VideoConsult = () => {
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#5c3b28] mb-2">
-                Describe your symptoms or concerns
+                Here is the summary of your symptoms
               </label>
               <Textarea
-                placeholder="Please describe what you're experiencing, when it started, and any other relevant details..."
+                placeholder="Once you book a consultation, your symptoms summary will appear here..."
                 value={symptoms}
                 onChange={(e) => setSymptoms(e.target.value)}
                 className="border-[#fde0e0] focus:border-[#e03131] rounded-lg"

@@ -60,14 +60,20 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Centralized Authentication Setup
 
-Simply open [Lovable](https://lovable.dev/projects/701efda7-cb63-4c75-a6e9-29299120670c) and click on Share -> Publish.
+This Revamp Hub connects to the `saarthi-auth` microservice for production-grade session persistence and user roles management.
 
-## Can I connect a custom domain to my Lovable project?
+### Features
+- Global `AuthContext` managing user details, token storage, and session checks.
+- Intercepts and automatic access token refreshing via refresh tokens.
+- Secure HTTP credentials integration (cookies) for API security.
 
-Yes, you can!
+### Local Development Setup
+1. Ensure the `saarthi-auth` backend is running at `http://localhost:5000`.
+2. Launch the frontend developer server:
+   ```bash
+   npm run dev
+   ```
+3. The application will run at `http://localhost:8080` (or the fallback local host port).
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)

@@ -5,16 +5,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Loader2 } from 'lucide-react';
 import { getEligibleSchemes } from "@/lib/schemeService";
 import { useNavigate } from "react-router-dom";
 
 interface EligibilityFormProps {
   onSubmit: (formData: any) => void;
+  /** When true, disables the submit button and shows a loading spinner */
+  isLoading?: boolean;
 }
 
 
-const EligibilityForm: React.FC<EligibilityFormProps> = ({ onSubmit }) => {
+const EligibilityForm: React.FC<EligibilityFormProps> = ({ onSubmit, isLoading = false }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
@@ -215,9 +217,18 @@ const EligibilityForm: React.FC<EligibilityFormProps> = ({ onSubmit }) => {
                 </div>
               </div>
               
-              <Button type="submit" className="w-full" size="lg">
-                <Sparkles className="w-5 h-5 mr-2" />
-                Find My Schemes
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Finding Schemes…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Find My Schemes
+                  </>
+                )}
               </Button>
             </form>
           </CardContent>

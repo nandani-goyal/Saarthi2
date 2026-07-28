@@ -1,37 +1,61 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowRight, Star, Users, Shield, Zap, Heart, FileText, Calendar, Stethoscope, Award, Activity, UserCheck, Database, Building2, Syringe, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
 import FeatureCard from '@/components/FeatureCard';
+import AuthModal from '@/components/AuthModal';
 import heroWomen from '@/assets/hero-women.jpg';
+import { useAuth } from '../context/AuthContext';
 
 const Index = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState("Priya");
+  const { user, loading, logout } = useAuth();
+  const isLoggedIn = !!user;
+  const userName = user ? user.name : "Priya";
 
-  const handleLogin = (name: string) => {
-    setIsLoggedIn(true);
-    setUserName(name);
+  const [view, setView] = useState<'landing' | 'dashboard'>('dashboard');
+
+  // Auth modal state — used when a guest clicks a gated feature card
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      setView('dashboard');
+    } else {
+      setView('landing');
+    }
+  }, [isLoggedIn]);
+
+  const handleLogin = (_name: string) => {
+    // Compatibility hook — auth is fully handled by useAuth()
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserName("");
+    logout();
   };
 
-  // If logged in, show dashboard
-  if (isLoggedIn) {
+  // Called by FeatureCard when a guest clicks a locked feature
+  const handleAuthRequired = () => {
+    setIsAuthModalOpen(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-muted-foreground font-medium text-lg animate-pulse">Loading Saarthi...</p>
+      </div>
+    );
+  }
+
+  // If logged in and current view is dashboard, show dashboard
+  if (isLoggedIn && view === 'dashboard') {
     return (
       <>
-        <Header 
-          isLoggedIn={isLoggedIn} 
+        <Header
           userDashboard={true}
-          userName={userName}
-          onLogin={handleLogin} 
-          onLogout={handleLogout} 
+          onViewChange={setView}
         />
         <Dashboard userName={userName} />
       </>
@@ -123,11 +147,19 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header 
-        isLoggedIn={isLoggedIn} 
+      <Header
+        isLoggedIn={isLoggedIn}
         userName={userName}
-        onLogin={handleLogin} 
-        onLogout={handleLogout} 
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+      />
+
+      {/* Auth modal — triggered when a guest clicks a gated feature */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLogin={handleLogin}
+        defaultMode="login"
       />
 
       {/* Hero Section */}
@@ -138,7 +170,7 @@ const Index = () => {
               <div className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
                 <span className="text-sm font-medium">Empowering Women's Health Since 2024</span>
               </div>
-              
+
               <h1 className="text-4xl lg:text-6xl font-bold leading-tight mb-6">
                 Your Trusted
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-orange-200 py-2">
@@ -146,14 +178,17 @@ const Index = () => {
                 </span>
                 for Complete Women's Wellness
               </h1>
-              
+
               <p className="text-xl text-white/90 mb-8 leading-relaxed">
-                From period tracking to expert consultations, government health schemes to peer support — 
+                From period tracking to expert consultations, government health schemes to peer support —
                 experience comprehensive women's healthcare designed by women, for women.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button onClick={() => handleLogin("Priya")} className="btn-hero text-lg px-8 py-4">
+                <Button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="btn-hero text-lg px-8 py-4"
+                >
                   Join Saarthi Today
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
@@ -166,7 +201,7 @@ const Index = () => {
                   Learn More
                 </Button>
               </div>
-              
+
               <div className="flex items-center gap-8 mt-8">
                 {stats.slice(0, 2).map((stat, index) => (
                   <div key={index} className="text-center">
@@ -176,10 +211,10 @@ const Index = () => {
                 ))}
               </div>
             </div>
-            
+
             <div className="relative">
-              <img 
-                src={heroWomen} 
+              <img
+                src={heroWomen}
                 alt="Professional women's health consultation"
                 className="rounded-2xl shadow-2xl w-full"
               />
@@ -210,21 +245,37 @@ const Index = () => {
               Revolutionary Health Features
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Experience cutting-edge women's healthcare technology designed by top medical experts 
+              Experience cutting-edge women's healthcare technology designed by top medical experts
               and AI specialists. Each feature is crafted to empower your health journey.
             </p>
+            {!isLoggedIn && (
+              <div className="mt-4 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm px-4 py-2 rounded-full">
+                <span>🔒</span>
+                <span>Please <button onClick={() => setIsAuthModalOpen(true)} className="underline font-semibold hover:text-amber-900">log in</button> to access any feature</span>
+              </div>
+            )}
           </div>
 
           {/* Feature Cards Grid - 2 rows of 4 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {features.slice(0, 4).map((feature, index) => (
-              <FeatureCard key={index} {...feature} />
+              <FeatureCard
+                key={index}
+                {...feature}
+                isLoggedIn={isLoggedIn}
+                onAuthRequired={handleAuthRequired}
+              />
             ))}
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.slice(4, 8).map((feature, index) => (
-              <FeatureCard key={index + 4} {...feature} />
+              <FeatureCard
+                key={index + 4}
+                {...feature}
+                isLoggedIn={isLoggedIn}
+                onAuthRequired={handleAuthRequired}
+              />
             ))}
           </div>
         </div>
@@ -239,9 +290,9 @@ const Index = () => {
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Join thousands of women who trust Saarthi for their complete health and wellness needs.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={() => handleLogin("Priya")} className="btn-hero text-lg px-8 py-4">
+            <Button onClick={() => setIsAuthModalOpen(true)} className="btn-hero text-lg px-8 py-4">
               Get Started Today
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
@@ -254,7 +305,7 @@ const Index = () => {
               Learn More
             </Button>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
@@ -277,7 +328,7 @@ const Index = () => {
                 Empowering women through technology and community support for better health outcomes.
               </p>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Services</h4>
               <ul className="space-y-2 text-sm text-primary-foreground/80">
@@ -287,7 +338,7 @@ const Index = () => {
                 <li>Government Schemes</li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-primary-foreground/80">
@@ -297,7 +348,7 @@ const Index = () => {
                 <li>Terms of Service</li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Contact</h4>
               <ul className="space-y-2 text-sm text-primary-foreground/80">
@@ -307,7 +358,7 @@ const Index = () => {
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-primary-foreground/20 mt-8 pt-8 text-center text-sm text-primary-foreground/80">
             <p>&copy; 2024 Saarthi Digital Hub. All rights reserved. Made with ❤️ for women's health.</p>
           </div>
