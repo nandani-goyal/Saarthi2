@@ -6,3 +6,6 @@ pydantic_core
 starlette
 typing_extensions
 uvicorn
+google-genai
+python-dotenv
+httpx
