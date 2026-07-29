@@ -20,7 +20,7 @@ async def generate_consultation_summary(symptoms: str) -> dict:
         return {"status": "Failed", "summary": "AI processing unavailable due to missing API key."}
 
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         prompt = f"""
         You are a medical AI assistant for a gynecology platform.

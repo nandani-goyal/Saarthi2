@@ -5,6 +5,7 @@ from datetime import datetime
 class AppointmentRequest(BaseModel):
     user_id: str = Field(..., description="The ID of the user booking the appointment")
     user_email: EmailStr = Field(..., description="The email address to send the confirmation to")
+    doctor_id: str = Field(..., description="The ID of the doctor being booked")
     appointment_datetime: datetime = Field(..., description="The UTC datetime of the appointment")
     timezone: str = Field(..., description="The user's timezone")
     consultation_mode: str = Field(..., description="Must be 'Video' or 'In-Person'")

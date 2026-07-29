@@ -40,7 +40,8 @@ const Dashboard = ({ userName }: DashboardProps) => {
       progress: 60,
       lastUsed: "1 week ago",
       color: "from-emerald-400 to-green-500",
-      link: "https://gyno-connect-oasis.vercel.app/",
+      // link: "https://gyno-connect-oasis.vercel.app/",
+      link:"https://gyno3.vercel.app/",
       used: true
     },
     {

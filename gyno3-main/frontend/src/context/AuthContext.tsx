@@ -51,8 +51,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     function fetchDbUserFallback() {
       // Fetch real user record from MongoDB
+      const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
       axios
-        .get("http://127.0.0.1:8000/api/users/current")
+        .get(`${API_BASE_URL}/api/users/current`)
         .then((res) => {
           if (res.data && res.data.id) {
             setUser(res.data);

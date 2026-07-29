@@ -13,18 +13,24 @@ export const getDiagnosis = async (symptoms: string[]) => {
   return response.json();
 };
 
-export const analyzeSymptoms = async (symptoms: string[]) => {
+export const analyzeSymptoms = async (
+  symptoms: string[],
+  duration?: string,
+  severity?: string,
+  language?: string
+) => {
   const response = await fetch(`${API_BASE}/analyze`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ symptoms }),
+    body: JSON.stringify({ symptoms, duration, severity, language }),
   });
 
   if (!response.ok) throw new Error("API call failed");
   return response.json();
 };
+
 
 export const getTips = async () => {
   const res = await fetch(`${API_BASE}/get-tips`);

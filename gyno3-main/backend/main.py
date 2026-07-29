@@ -200,7 +200,7 @@ async def book_appointment(req: AppointmentRequest, background_tasks: Background
     if req.appointment_datetime < now_utc:
         raise HTTPException(status_code=400, detail="Cannot book an appointment in the past.")
 
-    # 2. Duplicate Prevention
+    # 2. Duplicate Prevention (User level)
     existing_appointment = await appointments_collection.find_one({
         "user_id": req.user_id,
         "appointment_datetime": req.appointment_datetime
@@ -208,6 +208,15 @@ async def book_appointment(req: AppointmentRequest, background_tasks: Background
     
     if existing_appointment:
         raise HTTPException(status_code=409, detail="You already have an appointment booked for this exact date and time.")
+
+    # 3. Duplicate Prevention (Doctor level)
+    doctor_booked = await appointments_collection.find_one({
+        "doctor_id": req.doctor_id,
+        "appointment_datetime": req.appointment_datetime
+    })
+    
+    if doctor_booked:
+        raise HTTPException(status_code=409, detail="This doctor is already booked for this time slot.")
 
     # 3. Save initial record to MongoDB
     new_appointment = AppointmentModel(**req.model_dump())

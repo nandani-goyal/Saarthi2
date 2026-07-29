@@ -13,6 +13,7 @@ interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   doctorName: string;
+  doctorId: string;
   bookingType: "call" | "video" | "appointment";
 }
 
@@ -24,7 +25,7 @@ declare global {
   }
 }
 
-const BookingModal = ({ isOpen, onClose, doctorName, bookingType }: BookingModalProps) => {
+const BookingModal = ({ isOpen, onClose, doctorName, doctorId, bookingType }: BookingModalProps) => {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [mode, setMode] = useState<"Video" | "In-Person">(bookingType === "video" ? "Video" : "In-Person");
@@ -161,13 +162,15 @@ const BookingModal = ({ isOpen, onClose, doctorName, bookingType }: BookingModal
       const payload = {
         user_id: user.id,         // ← real MongoDB _id from saarthi-auth
         user_email: user.email,   // ← real email — confirmation will go here
+        doctor_id: doctorId,
         appointment_datetime: dateObj.toISOString(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         consultation_mode: mode,
         original_symptoms: symptoms
       };
 
-      await axios.post("http://127.0.0.1:8000/api/appointments", payload);
+      const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+      await axios.post(`${API_BASE_URL}/api/appointments`, payload);
 
       toast({
         title: "Booking Confirmed! ✅",

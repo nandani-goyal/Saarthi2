@@ -116,6 +116,7 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         doctorName={doctor.name}
+        doctorId={String(doctor.id)}
         bookingType={bookingType}
       />
     </>
