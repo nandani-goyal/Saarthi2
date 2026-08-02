@@ -14,7 +14,7 @@
 
 - 🧕 [**NGOHeal** – Connect to Verified NGOs for Women’s Health Aid](https://ngo-heal.vercel.app/)
 - 💉 [**VaxAlert** – Real-Time Vaccine Alerts & Health Drive Updates](https://vaxalert2.vercel.app/)
-- 🧠 [**SymptoScan** – AI Symptom Checker for Women’s Health](https://symptoscan-2mg1.onrender.com/)
+- 🧠 [**SymptoScan** – AI Symptom Checker for Women’s Health](https://saarthi2-167k.vercel.app/)
 - 🗣 [**CareCircle** – Peer & Emotional Support Chat Groups](https://carecircle-women-unite.vercel.app/)
 - 📜 [**HealthYojana** – Personalized Government Scheme Finder](https://health-yojana.vercel.app/)
 - 🛢 [**MediVault** – Store Your Prescriptions & Medical Records](https://medi-safe-journal-vault.vercel.app/)

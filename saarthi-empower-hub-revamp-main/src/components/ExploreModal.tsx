@@ -86,14 +86,14 @@ const ExploreModal = ({ isOpen, onClose, onLogin }: ExploreModalProps) => {
       name: "SymptoScan", 
       users: "18k+", 
       color: "from-blue-400 to-cyan-500", 
-      link: "https://symptoscan-2mg1.onrender.com/" 
+      link: "https://saarthi2-167k.vercel.app/" 
     },
     { 
       icon: Stethoscope, 
       name: "GynConnect", 
       users: "12k+", 
       color: "from-emerald-400 to-green-500", 
-      link: "https://gyno-connect-oasis.vercel.app/" 
+      link: "https://gyno3.vercel.app/" 
     },
     { 
       icon: Database, 

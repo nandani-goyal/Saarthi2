@@ -1,16 +1,30 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { Upload, Calendar, Bell, Share, Download, FileText, Plus, Link, Heart, Activity, Shield, Calculator, Stethoscope, Pill, Scan, Camera, Eye, Database } from "lucide-react";
-import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Upload, FileText, Plus, Heart, Activity, Shield, Calculator, Stethoscope, Pill, Scan, Camera, Eye, Database, Lock, Key, Sparkles, Loader2, Clock, CheckCircle2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { 
+  uploadPrescription, 
+  uploadMedicalScan, 
+  fetchPrescriptions, 
+  fetchMedicalScans, 
+  getSignedDocumentUrl, 
+  PrescriptionRecord, 
+  MedicalScanRecord, 
+  SignedUrlResponse 
+} from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Health Metrics State
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
   const [bmi, setBmi] = useState<number | null>(null);
@@ -19,6 +33,19 @@ const Index = () => {
   const [sugar, setSugar] = useState("");
   const [bpResult, setBpResult] = useState("");
   const [sugarResult, setSugarResult] = useState("");
+
+  // Backend Integration & Security State
+  const [prescriptions, setPrescriptions] = useState<PrescriptionRecord[]>([]);
+  const [scans, setScans] = useState<MedicalScanRecord[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
+  const [ocrStatusMessage, setOcrStatusMessage] = useState("");
+  const [uploadCategory, setUploadCategory] = useState<'prescription' | 'scan'>('prescription');
+
+  // Secure Signed Document Viewer Modal State
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [signedDocData, setSignedDocData] = useState<SignedUrlResponse | null>(null);
+  const [isLoadingSignedUrl, setIsLoadingSignedUrl] = useState(false);
 
   // Health monitoring data
   const healthData = [
@@ -29,6 +56,118 @@ const Index = () => {
     { month: 'May', weight: 66, bp: 120, sugar: 90 },
     { month: 'Jun', weight: 65, bp: 118, sugar: 87 },
   ];
+
+  // Fetch initial prescriptions & scans from MongoDB on mount
+  useEffect(() => {
+    loadDatabaseRecords();
+  }, []);
+
+  const loadDatabaseRecords = async () => {
+    try {
+      const fetchedPrescriptions = await fetchPrescriptions();
+      setPrescriptions(fetchedPrescriptions);
+      const fetchedScans = await fetchMedicalScans();
+      setScans(fetchedScans);
+    } catch (err) {
+      console.warn("Could not connect to live backend server, using cached demo data:", err);
+      // Fallback initial data if server is booting up
+      setPrescriptions([
+        {
+          _id: "demo-1",
+          doctorName: "Dr. Sarah Johnson",
+          specialization: "Internal Medicine",
+          date: "2024-06-15",
+          status: "Active",
+          medicines: [
+            { name: "Iron Supplement (Ferrous Fumarate)", dosage: "325mg", frequency: "Take once daily with food", duration: "30 days" },
+            { name: "Vitamin D3 Cholecalciferol", dosage: "2000 IU", frequency: "Take once daily", duration: "60 days" }
+          ],
+          createdAt: new Date().toISOString()
+        }
+      ]);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    setIsUploading(true);
+
+    if (uploadCategory === 'prescription') {
+      setIsOcrProcessing(true);
+      setOcrStatusMessage("Encrypting server-side (AES-256) & Running Tesseract.js OCR engine...");
+
+      try {
+        const result = await uploadPrescription(file);
+        setOcrStatusMessage("Auto-populating extracted medicine names and prescription details...");
+        
+        toast({
+          title: "Prescription Processed & Encrypted!",
+          description: `AES-256 Encrypted at rest. Tesseract OCR extracted ${result.prescription.medicines.length} medicines.`,
+        });
+
+        await loadDatabaseRecords();
+      } catch (error: any) {
+        toast({
+          title: "Upload Failed",
+          description: error.message || "Failed to process prescription with OCR",
+          variant: "destructive",
+        });
+      } finally {
+        setIsUploading(false);
+        setIsOcrProcessing(false);
+        setOcrStatusMessage("");
+      }
+    } else {
+      try {
+        await uploadMedicalScan(file);
+        toast({
+          title: "Medical Scan Encrypted & Saved!",
+          description: "Scan encrypted with AES-256 and saved to MongoDB saarthi-auth database.",
+        });
+        await loadDatabaseRecords();
+      } catch (error: any) {
+        toast({
+          title: "Upload Failed",
+          description: error.message || "Failed to upload medical scan",
+          variant: "destructive",
+        });
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  const handleViewSecureDocument = async (documentId?: string) => {
+    if (!documentId) {
+      toast({
+        title: "No Encrypted Document Attached",
+        description: "This sample prescription is demonstration data without an attached document buffer.",
+      });
+      return;
+    }
+
+    setIsLoadingSignedUrl(true);
+    try {
+      const signedData = await getSignedDocumentUrl(documentId);
+      setSignedDocData(signedData);
+      setPreviewModalOpen(true);
+      toast({
+        title: "Expiring Signed URL Generated",
+        description: `URL generated with HMAC-SHA256 verification (Expires in ${signedData.ttlSeconds}s).`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Access Denied",
+        description: err.message || "Failed to acquire signed access URL",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSignedUrl(false);
+    }
+  };
 
   const calculateBMI = () => {
     if (weight && height) {
@@ -78,54 +217,50 @@ const Index = () => {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleUploadReport = () => {
-    scrollToSection('upload-section');
-  };
-
-  const handleBMICalculator = () => {
-    scrollToSection('bmi-section');
-  };
-
-  const handlePrescriptions = () => {
-    scrollToSection('prescriptions-section');
-  };
-
-  const handleHealthRecords = () => {
-    scrollToSection('records-section');
-  };
-
-  const handleScans = () => {
-    scrollToSection('scans-section');
-  };
-
-  const handleHealthMonitoring = () => {
-    scrollToSection('monitoring-section');
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100">
+      {/* Hidden File Input */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileUpload} 
+        className="hidden" 
+        accept="image/*,application/pdf"
+      />
+
       {/* Header Section */}
       <div className="border-b border-stone-300 bg-gradient-to-r from-stone-100 to-stone-200 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gradient-to-br from-stone-800 to-amber-900 rounded-xl flex items-center justify-center shadow-lg"
                style={{ color: 'hsl(25, 50%, 20%)' }}
               >
-              
-                <Database className="w-7 h-7 text-white"
-                 />
+                <Database className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold  font-serif"
-                 style={{ color: 'hsl(25, 50%, 20%)' }}
-                >MediVault</h1>
-                <p className="text-sm text-stone-700 font-medium">Your comprehensive health management system</p>
+                <div className="flex items-center space-x-2">
+                  <h1 className="text-3xl font-bold font-serif" style={{ color: 'hsl(25, 50%, 20%)' }}>MediVault</h1>
+                  <Badge className="bg-amber-800 text-white font-sans text-xs">Saarthi Module</Badge>
+                </div>
+                <p className="text-sm text-stone-700 font-medium">Project Saarthi - Medical Records & Health Journal Vault</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2 bg-green-100 px-4 py-2 rounded-full border border-green-300">
-              <Shield className="w-5 h-5 text-green-700" />
-              <span className="text-green-800 font-semibold text-sm">Secure & Encrypted</span>
+            
+            {/* Security Badges Header */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center space-x-2 bg-emerald-100 px-3 py-1.5 rounded-full border border-emerald-300">
+                <Lock className="w-4 h-4 text-emerald-800" />
+                <span className="text-emerald-900 font-semibold text-xs">AES-256 Encrypted</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-300">
+                <Key className="w-4 h-4 text-amber-800" />
+                <span className="text-amber-900 font-semibold text-xs">Expiring Signed URLs</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-blue-100 px-3 py-1.5 rounded-full border border-blue-300">
+                <Sparkles className="w-4 h-4 text-blue-800" />
+                <span className="text-blue-900 font-semibold text-xs">Tesseract.js OCR</span>
+              </div>
             </div>
           </div>
         </div>
@@ -135,65 +270,63 @@ const Index = () => {
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-cream-500/20 to-amber-800/20 z-10"></div>
         <div 
-          className="bg-cover bg-center bg-no-repeat py-20" 
+          className="bg-cover bg-center bg-no-repeat py-16" 
           style={{
             backgroundImage: `url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80')`
           }}
         >
           <div className="container mx-auto px-6 relative z-20">
-            <div className="text-center mb-12 bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-stone-200">
-              <h2
-  className="text-5xl font-bold mb-6 font-serif leading-tight"
-  style={{ color: 'hsl(25, 50%, 20%)' }}
->
-  Complete Medical Records Management
-</h2>
-
-              <p className="text-xl text-stone-800 mb-8 max-w-4xl mx-auto leading-relaxed">
-                Store, organize and manage all your health records, prescriptions, lab reports, and medical history securely.
+            <div className="text-center mb-8 bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-stone-200">
+              <h2 className="text-4xl md:text-5xl font-bold mb-4 font-serif leading-tight" style={{ color: 'hsl(25, 50%, 20%)' }}>
+                Encrypted Medical Vault & OCR Auto-Parser
+              </h2>
+              <p className="text-lg text-stone-800 mb-6 max-w-4xl mx-auto leading-relaxed">
+                Store prescriptions and scans with <strong>AES-256 server-side encryption at rest</strong>, stream with <strong>expiring signed URLs</strong>, and auto-extract medicine data with <strong>Tesseract.js OCR</strong>.
               </p>
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 justify-center">
+
+              {/* Navigation Action Buttons */}
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 justify-center">
                 <Button 
-                  onClick={handleUploadReport}
-                  className="bg-gradient-to-r from-amber-950 to-amber-600  px-6 py-4 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+                  onClick={() => scrollToSection('upload-section')}
+                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all text-sm"
                 >
-                  <Upload className="w-5 h-5 mr-2" />
-                  Upload Reports
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload & OCR
                 </Button>
                 <Button 
-                  onClick={handleBMICalculator}
-                  className="bg-gradient-to-r from-amber-950 to-amber-600  px-6 py-4 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+                  onClick={() => scrollToSection('bmi-section')}
+                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all text-sm"
                 >
-                  <Calculator className="w-5 h-5 mr-2" />
-                  Health Calculator
+                  <Calculator className="w-4 h-4 mr-2" />
+                  Calculators
                 </Button>
                 <Button 
-                  onClick={handlePrescriptions}
-                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-6 py-4 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+                  onClick={() => scrollToSection('prescriptions-section')}
+                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all text-sm"
                 >
-                  <Pill className="w-5 h-5 mr-2" />
+                  <Pill className="w-4 h-4 mr-2" />
                   Prescriptions
                 </Button>
                 <Button 
-                  onClick={handleHealthRecords}
-                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-6 py-4 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+                  onClick={() => scrollToSection('records-section')}
+                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all text-sm"
                 >
-                  <Stethoscope className="w-5 h-5 mr-2" />
-                  Health Records
+                  <Stethoscope className="w-4 h-4 mr-2" />
+                  Records
                 </Button>
                 <Button 
-                  onClick={handleScans}
-                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-6 py-4 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+                  onClick={() => scrollToSection('scans-section')}
+                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all text-sm"
                 >
-                  <Scan className="w-5 h-5 mr-2" />
-                  X-rays & Scans
+                  <Scan className="w-4 h-4 mr-2" />
+                  Scans & X-Rays
                 </Button>
                 <Button 
-                  onClick={handleHealthMonitoring}
-                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-6 py-4 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+                  onClick={() => scrollToSection('monitoring-section')}
+                  className="bg-gradient-to-r from-amber-950 to-amber-600 px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all text-sm"
                 >
-                  <Activity className="w-5 h-5 mr-2" />
-                  Health Monitoring
+                  <Activity className="w-4 h-4 mr-2" />
+                  Monitoring
                 </Button>
               </div>
             </div>
@@ -201,55 +334,103 @@ const Index = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-12"
-       style={{ color: 'hsl(25, 50%, 20%)' }}>
-        {/* Upload Section */}
+      <div className="container mx-auto px-6 py-12" style={{ color: 'hsl(25, 50%, 20%)' }}>
+        
+        {/* Upload Section with Tesseract.js OCR Pipeline */}
         <section id="upload-section" className="mb-16">
           <Card className="border-3 border-stone-300 bg-gradient-to-br from-white to-stone-50 shadow-xl">
-            <CardHeader className="bg-gradient-to-r from-stone-100 to-stone-200 rounded-t-lg">
-              <CardTitle className=" text-2xl font-bold flex items-center"
-               style={{ color: 'hsl(25, 50%, 15%)' }}>
-                <Upload className="w-7 h-7 mr-3 " 
-                 style={{ color: 'hsl(25, 50%, 20%)' }}/>
-                Upload Medical Documents
+            <CardHeader className="bg-gradient-to-r from-stone-100 to-stone-200 rounded-t-lg flex flex-row items-center justify-between">
+              <CardTitle className="text-2xl font-bold flex items-center" style={{ color: 'hsl(25, 50%, 15%)' }}>
+                <Upload className="w-7 h-7 mr-3 text-amber-900" />
+                Upload & Auto-Extract Prescription (OCR)
               </CardTitle>
+              <div className="flex gap-2">
+                <Button 
+                  variant={uploadCategory === 'prescription' ? 'default' : 'outline'}
+                  onClick={() => setUploadCategory('prescription')}
+                  className={uploadCategory === 'prescription' ? 'bg-amber-900 text-white' : 'border-stone-400'}
+                  size="sm"
+                >
+                  <Pill className="w-4 h-4 mr-1" /> Prescription + OCR
+                </Button>
+                <Button 
+                  variant={uploadCategory === 'scan' ? 'default' : 'outline'}
+                  onClick={() => setUploadCategory('scan')}
+                  className={uploadCategory === 'scan' ? 'bg-stone-900 text-white' : 'border-stone-400'}
+                  size="sm"
+                >
+                  <Scan className="w-4 h-4 mr-1" /> Scan / X-Ray
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div>
                   <div 
-                    className="border-3 border-dashed border-stone-400 rounded-2xl p-12 mb-8 bg-gradient-to-br from-stone-50 to-stone-100 hover:from-stone-100 hover:to-stone-150 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl transform hover:scale-105"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-3 border-dashed border-amber-400 rounded-2xl p-10 mb-6 bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 hover:from-amber-100 hover:to-orange-50 transition-all cursor-pointer shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     <div className="text-center">
-                      <div className="w-24 h-24 bg-gradient-to-br from-stone-200 to-stone-300 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                        <Upload className="w-12 h-12 text-stone-800" />
+                      <div className="w-20 h-20 bg-gradient-to-br from-amber-800 to-stone-900 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        {isUploading ? <Loader2 className="w-10 h-10 animate-spin" /> : <Upload className="w-10 h-10" />}
                       </div>
-                      <h3 className="text-3xl font-bold mb-4"
-                       style={{ color: 'hsl(25, 50%, 20%)' }}>Drop your files here</h3>
-                      <p className="text-amber-600 mb-6 font-medium text-lg">Support for PDF, JPG, PNG files up to 25MB</p>
-                      <div className="flex gap-2 mb-4">
-                        <Button className="bg-amber-900 hover:bg-amber-700 text-white">
+                      <h3 className="text-2xl font-bold mb-2" style={{ color: 'hsl(25, 50%, 20%)' }}>
+                        {uploadCategory === 'prescription' ? 'Upload Prescription Image / PDF' : 'Upload Medical Scan / X-Ray'}
+                      </h3>
+                      <p className="text-amber-800 mb-4 font-medium text-sm">
+                        {uploadCategory === 'prescription' 
+                          ? 'Auto-extracts medicines & dates using Tesseract.js OCR pipeline.' 
+                          : 'Encrypted server-side at rest with AES-256-GCM.'}
+                      </p>
+
+                      {isOcrProcessing && (
+                        <div className="mb-4 p-3 bg-amber-100 border border-amber-300 rounded-xl flex items-center justify-center space-x-2 text-amber-900 font-semibold text-sm animate-pulse">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>{ocrStatusMessage}</span>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 justify-center">
+                        <Button className="bg-amber-900 hover:bg-amber-800 text-white" disabled={isUploading}>
                           <FileText className="w-4 h-4 mr-2" />
-                          Browse Files
-                        </Button>
-                        <Button variant="outline" className="border-stone-400">
-                          <Camera className="w-4 h-4 mr-2" />
-                          Take Photo
+                          {isUploading ? 'Processing File...' : 'Browse Local Files'}
                         </Button>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div 
-                  className="h-96 bg-cover bg-center rounded-2xl border-2 border-stone-300 shadow-lg"
-                  style={{
-                    backgroundImage: `url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')`
-                  }}
-                >
-                  <div className="h-full bg-gradient-to-t from-stone-900/70 to-transparent rounded-2xl flex items-end p-6">
-                    <div className="text-white">
-                      <h3 className="text-2xl font-bold mb-2">Document Management</h3>
-                      <p className="text-stone-200">Secure storage for all your medical documents</p>
+
+                {/* Security Feature Card */}
+                <div className="bg-gradient-to-br from-stone-900 to-amber-950 rounded-2xl border-2 border-stone-700 p-6 shadow-xl text-white flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center space-x-3 mb-4">
+                      <Shield className="w-8 h-8 text-amber-400" />
+                      <h3 className="text-2xl font-bold font-serif text-amber-100">Medical Data Security Architecture</h3>
+                    </div>
+                    <div className="space-y-4 text-stone-300 text-sm">
+                      <div className="flex items-start space-x-3 bg-white/5 p-3 rounded-lg border border-white/10">
+                        <Lock className="w-5 h-5 text-amber-400 mt-0.5" />
+                        <div>
+                          <strong className="text-white block">Server-Side AES-256-GCM Encryption at Rest</strong>
+                          Files are encrypted before touching disk/storage with unique initialization vectors (IV) and authentication tags.
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3 bg-white/5 p-3 rounded-lg border border-white/10">
+                        <Key className="w-5 h-5 text-emerald-400 mt-0.5" />
+                        <div>
+                          <strong className="text-white block">Expiring HMAC Signed URLs (Zero Public Access)</strong>
+                          No public storage buckets. Files are streamed only through time-limited HMAC-SHA256 signed access tokens.
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3 bg-white/5 p-3 rounded-lg border border-white/10">
+                        <Database className="w-5 h-5 text-blue-400 mt-0.5" />
+                        <div>
+                          <strong className="text-white block">Shared MongoDB Database (saarthi-auth)</strong>
+                          Prescription and document collections reside directly in the unified Project Saarthi database.
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -258,13 +439,99 @@ const Index = () => {
           </Card>
         </section>
 
-        {/* Health Calculator Section */}
+        {/* Prescription Management Section (Auto-Populated via Tesseract.js OCR) */}
+        <section id="prescriptions-section" className="mb-16">
+          <Card className="border-3 border-stone-300 bg-gradient-to-br from-white to-stone-50 shadow-xl">
+            <CardHeader className="bg-gradient-to-r from-stone-100 to-stone-200 rounded-t-lg flex items-center justify-between">
+              <CardTitle className="text-2xl font-bold flex items-center" style={{ color: 'hsl(25, 50%, 20%)' }}>
+                <Pill className="w-7 h-7 mr-3 text-amber-900" />
+                Prescription Management (OCR Auto-Extracted)
+              </CardTitle>
+              <Button onClick={() => fileInputRef.current?.click()} className="bg-amber-900 hover:bg-amber-800 text-white" size="sm">
+                <Plus className="w-4 h-4 mr-2" /> Upload New Prescription
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-xl font-bold" style={{ color: 'hsl(25, 50%, 20%)' }}>
+                      Stored Prescriptions ({prescriptions.length})
+                    </h3>
+                  </div>
+                  
+                  {prescriptions.map((rx) => (
+                    <div key={rx._id} className="bg-gradient-to-r from-white to-amber-50/40 border-2 border-stone-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h4 className="font-bold text-stone-900 text-lg flex items-center">
+                            {rx.doctorName}
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 ml-2" />
+                          </h4>
+                          <p className="text-stone-600 text-sm">{rx.specialization || 'Internal Medicine'}</p>
+                          <p className="text-xs text-stone-500 mt-1">Prescribed Date: <strong>{rx.date}</strong></p>
+                        </div>
+                        <Badge className="bg-emerald-100 text-emerald-900 border-emerald-300">Active</Badge>
+                      </div>
+                      
+                      {/* Extracted Medicines List */}
+                      <div className="space-y-2 mb-4">
+                        <div className="text-xs font-bold text-amber-900 uppercase tracking-wider">Auto-Extracted Medicines (OCR):</div>
+                        {rx.medicines.map((med, idx) => (
+                          <div key={idx} className="flex justify-between items-center p-3 bg-stone-50 rounded-lg border border-stone-200 text-sm">
+                            <div>
+                              <div className="font-semibold text-stone-900">{med.name}</div>
+                              <div className="text-xs text-stone-600">{med.dosage} • {med.frequency}</div>
+                            </div>
+                            <div className="text-xs font-semibold text-stone-700 bg-stone-200 px-2.5 py-1 rounded">
+                              {med.duration || '30 days'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleViewSecureDocument(rx.documentId)}
+                          disabled={isLoadingSignedUrl}
+                          className="border-stone-400 hover:bg-stone-100 text-stone-900"
+                        >
+                          <Eye className="w-4 h-4 mr-2 text-amber-800" />
+                          View Document (Signed URL)
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <div 
+                    className="h-80 bg-cover bg-center rounded-2xl border-2 border-stone-300 shadow-lg mb-4"
+                    style={{
+                      backgroundImage: `url('https://images.unsplash.com/photo-1559757175-0eb30cd8c063?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')`
+                    }}
+                  >
+                    <div className="h-full bg-gradient-to-t from-stone-900/80 to-transparent rounded-2xl flex items-end p-6">
+                      <div className="text-white">
+                        <h3 className="text-2xl font-bold mb-1">OCR Prescription Scanning</h3>
+                        <p className="text-stone-200 text-sm">Tesseract.js extracts medicine names, dosages, frequencies, and doctor dates automatically.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Health Calculators Section */}
         <section id="bmi-section" className="mb-16">
           <Card className="border-3 border-stone-300 bg-gradient-to-br from-white to-stone-50 shadow-xl">
             <CardHeader className="bg-gradient-to-r from-stone-100 to-stone-200 rounded-t-lg">
               <CardTitle className="text-2xl font-bold flex items-center">
-                <Calculator className="w-7 h-7 mr-3 text-stone-800" 
-                 style={{ color: 'hsl(25, 50%, 25%)' }}/>
+                <Calculator className="w-7 h-7 mr-3 text-stone-800" style={{ color: 'hsl(25, 50%, 25%)' }}/>
                 Health Metrics Calculator
               </CardTitle>
             </CardHeader>
@@ -272,8 +539,7 @@ const Index = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* BMI Calculator */}
                 <div className="space-y-6">
-                  <h3 className="text-xl font-bold "
-                   style={{ color: 'hsl(25, 50%, 20%)' }}>BMI Calculator</h3>
+                  <h3 className="text-xl font-bold " style={{ color: 'hsl(25, 50%, 20%)' }}>BMI Calculator</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-stone-800 font-semibold mb-2 block">Weight (kg)</Label>
@@ -297,7 +563,7 @@ const Index = () => {
                   
                   <Button 
                     onClick={calculateBMI}
-                    className="w-full bg-gradient-to-r from-amber-800 to-stone-900  py-4 text-lg font-semibold shadow-lg"
+                    className="w-full bg-gradient-to-r from-amber-800 to-stone-900 text-white py-4 text-lg font-semibold shadow-lg"
                   >
                     Calculate BMI
                   </Button>
@@ -315,8 +581,7 @@ const Index = () => {
 
                 {/* Blood Pressure Calculator */}
                 <div className="space-y-6">
-                  <h3 className="text-xl font-bold "
-                   style={{ color: 'hsl(25, 50%, 20%)' }}>Blood Pressure</h3>
+                  <h3 className="text-xl font-bold " style={{ color: 'hsl(25, 50%, 20%)' }}>Blood Pressure</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-stone-800 font-semibold mb-2 block">Systolic</Label>
@@ -340,7 +605,7 @@ const Index = () => {
                   
                   <Button 
                     onClick={checkBloodPressure}
-                    className="w-full bg-gradient-to-r from-amber-800 to-stone-900  text-white py-4 text-lg font-semibold shadow-lg"
+                    className="w-full bg-gradient-to-r from-amber-800 to-stone-900 text-white py-4 text-lg font-semibold shadow-lg"
                   >
                     Check BP
                   </Button>
@@ -356,24 +621,21 @@ const Index = () => {
 
                 {/* Blood Sugar Calculator */}
                 <div className="space-y-6">
-                  <h3 className="text-xl font-bold "
-                   style={{ color: 'hsl(25, 50%, 20%)' }}>Blood Sugar</h3>
+                  <h3 className="text-xl font-bold " style={{ color: 'hsl(25, 50%, 20%)' }}>Blood Sugar</h3>
                   <div>
-                    <Label className=" font-semibold mb-2 block"
-                     style={{ color: 'hsl(25, 50%, 20%)' }}>Sugar Level (mg/dL)</Label>
+                    <Label className=" font-semibold mb-2 block" style={{ color: 'hsl(25, 50%, 20%)' }}>Sugar Level (mg/dL)</Label>
                     <Input 
                       value={sugar}
                       onChange={(e) => setSugar(e.target.value)}
                       placeholder="90-100"
                       className="border-amber-300 focus:border-amber-500 bg-white text-lg p-3"
-                       style={{ color: 'hsl(25, 50%, 20%)' }}
+                      style={{ color: 'hsl(25, 50%, 20%)' }}
                     />
                   </div>
                   
                   <Button 
                     onClick={checkBloodSugar}
-                    className="w-full bg-gradient-to-r from-amber-800 to-stone-900  text-white py-4 text-lg font-semibold shadow-lg"
-
+                    className="w-full bg-gradient-to-r from-amber-800 to-stone-900 text-white py-4 text-lg font-semibold shadow-lg"
                   >
                     Check Sugar
                   </Button>
@@ -395,8 +657,7 @@ const Index = () => {
         <section id="monitoring-section" className="mb-16">
           <Card className="border-3 border-amber-300 bg-gradient-to-br from-white to-amber-50 shadow-xl">
             <CardHeader className="bg-gradient-to-r from-stone-50 to-stone-200 rounded-t-lg">
-              <CardTitle className=" text-2xl font-bold flex items-center"
-               style={{ color: 'hsl(25, 50%, 20%)' }}>
+              <CardTitle className=" text-2xl font-bold flex items-center" style={{ color: 'hsl(25, 50%, 20%)' }}>
                 <Activity className="w-7 h-7 mr-3 text-stone-800" />
                 Health Monitoring Dashboard
               </CardTitle>
@@ -427,8 +688,7 @@ const Index = () => {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="bg-gradient-to-br from-stone-50 to-stone-100 p-6 rounded-2xl border-2 border-stone-200 shadow-lg"
-                >
+                <div className="bg-gradient-to-br from-stone-50 to-stone-100 p-6 rounded-2xl border-2 border-stone-200 shadow-lg">
                   <h3 className="text-xl font-bold text-stone-900 mb-6 flex items-center">
                     <div className="w-3 h-3 bg-stone-600 rounded-full mr-3"></div>
                     Blood Sugar Levels
@@ -455,234 +715,53 @@ const Index = () => {
           </Card>
         </section>
 
-        {/* Prescriptions Section */}
-        <section id="prescriptions-section" className="mb-16">
-          <Card className="border-3 border-stone-300 bg-gradient-to-br from-white to-stone-50 shadow-xl">
-            <CardHeader className="bg-gradient-to-r from-stone-100 to-stone-200 rounded-t-lg">
-              <CardTitle className=" text-2xl font-bold flex items-center"
-               style={{ color: 'hsl(25, 50%, 20%)' }}>
-                <Pill className="w-7 h-7 mr-3 text-stone-800" />
-                Prescription Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div>
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold"
-                     style={{ color: 'hsl(25, 50%, 20%)' }}>Stored Prescriptions</h3>
-                    <Button className="bg-stone-800 hover:bg-stone-900 text-white">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add New
-                    </Button>
-                  </div>
-                  
-                  {/* Example Prescription */}
-                  <div className="bg-gradient-to-r from-white to-stone-50 border-2 border-stone-200 rounded-2xl p-6 mb-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h4 className="font-bold text-stone-900 text-lg">Dr. Sarah Johnson</h4>
-                        <p className="text-stone-600">Internal Medicine</p>
-                        <p className="text-sm text-stone-500">June 15, 2024</p>
-                      </div>
-                      <Badge className="bg-green-200 text-green-900 border-green-400">Active</Badge>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-stone-50 rounded-lg border border-stone-200">
-                        <div>
-                          <div className="font-semibold text-stone-900">Iron Supplement</div>
-                          <div className="text-sm text-stone-600">325mg - Take once daily with food</div>
-                        </div>
-                        <div className="text-sm text-stone-800 font-semibold">30 days</div>
-                      </div>
-                      
-                      <div className="flex justify-between items-center p-3 bg-stone-50 rounded-lg border border-stone-200">
-                        <div>
-                          <div className="font-semibold text-stone-900">Vitamin D3</div>
-                          <div className="text-sm text-stone-600">2000 IU - Take once daily</div>
-                        </div>
-                        <div className="text-sm text-stone-800 font-semibold">60 days</div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex gap-2">
-                      <Button size="sm" variant="outline" className="border-stone-400">
-                        <Eye className="w-4 h-4 mr-2" />
-                        View PDF
-                      </Button>
-                      <Button size="sm" variant="outline" className="border-stone-400">
-                        <Share className="w-4 h-4 mr-2" />
-                        Share
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div 
-                    className="h-96 bg-cover bg-center rounded-2xl border-2 border-stone-300 shadow-lg mb-4"
-                    style={{
-                      backgroundImage: `url('https://images.unsplash.com/photo-1559757175-0eb30cd8c063?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')`
-                    }}
-                  >
-                    <div className="h-full bg-gradient-to-t from-stone-900/70 to-transparent rounded-2xl flex items-end p-6">
-                      <div className="text-white">
-                        <h3 className="text-2xl font-bold mb-2">Medication Tracking</h3>
-                        <p className="text-stone-200">Smart reminders and compliance monitoring</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Health Records Section */}
-        <section id="records-section" className="mb-16">
-          <Card className="border-3 border-stone-300 bg-gradient-to-br from-white to-stone-50 shadow-xl">
-            <CardHeader className="bg-gradient-to-r from-stone-100 to-stone-200 rounded-t-lg">
-              <CardTitle className="text-amber text-2xl font-bold flex items-center">
-                <Stethoscope className="w-7 h-7 mr-3 " 
-                 style={{ color: 'hsl(25, 50%, 20%)' }}/>
-                Health Records & Consultations
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-6">
-                  <h3 className="text-xl font-bold ">Recent Consultations</h3>
-                  
-                  <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-white to-stone-50 border-2 border-stone-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <div className="flex items-start space-x-4">
-                        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-stone-300">
-                          <img 
-                            src="https://img.freepik.com/premium-photo/young-indian-girl-female-doctor_669954-15854.jpg"
-                            alt="Dr. Sarah Johnson"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-bold text-stone-900 text-lg">Dr. Sarah Johnson</h4>
-                          <p className="text-stone-600 mb-2">Internal Medicine Specialist</p>
-                          <p className="text-sm text-stone-500 mb-3">Last visited: June 15, 2024</p>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge className="bg-stone-200 text-stone-900 border-stone-400">Iron Deficiency</Badge>
-                            <Badge className="bg-blue-200 text-blue-900 border-blue-400">Follow-up Required</Badge>
-                          </div>
-                          <div className="mt-3">
-                            <Button size="sm" variant="outline" className="border-stone-400">
-                              <Eye className="w-4 h-4 mr-2" />
-                              View Report
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div 
-                    className="h-64 bg-cover bg-center rounded-2xl border-2 border-stone-300 shadow-lg mb-6"
-                    style={{
-                      backgroundImage: `url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')`
-                    }}
-                  >
-                    <div className="h-full bg-gradient-to-t from-stone-900/70 to-transparent rounded-2xl flex items-end p-6">
-                      <div className="text-white">
-                        <h3 className="text-xl font-bold">Healthcare Network</h3>
-                        <p className="text-stone-200">Connected specialists</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="text-center p-4 bg-gradient-to-br from-stone-100 to-stone-200 rounded-xl border-2 border-stone-300">
-                      <div className="text-3xl font-bold text-stone-900">8</div>
-                      <div className="text-sm text-stone-700 font-semibold">Connected Doctors</div>
-                    </div>
-                    <div className="text-center p-4 bg-gradient-to-br from-stone-100 to-stone-200 rounded-xl border-2 border-stone-300">
-                      <div className="text-3xl font-bold text-stone-900">24</div>
-                      <div className="text-sm text-stone-700 font-semibold">Total Consultations</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
         {/* Scans & Reports Section */}
         <section id="scans-section" className="mb-16">
           <Card className="border-3 border-stone-300 bg-gradient-to-br from-white to-stone-50 shadow-xl">
             <CardHeader className="bg-gradient-to-r from-stone-100 to-stone-200 rounded-t-lg">
               <CardTitle className="text-stone-900 text-2xl font-bold flex items-center">
                 <Scan className="w-7 h-7 mr-3 text-stone-800" />
-                Medical Scans & X-rays
+                Medical Scans & X-Rays (Encrypted)
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-bold text-stone-900">Recent Scans</h3>
-                    <Button className="bg-stone-800 hover:bg-stone-900 text-white">
+                    <h3 className="text-xl font-bold text-stone-900">Stored Medical Scans</h3>
+                    <Button onClick={() => { setUploadCategory('scan'); fileInputRef.current?.click(); }} className="bg-stone-800 hover:bg-stone-900 text-white">
                       <Upload className="w-4 h-4 mr-2" />
                       Upload Scan
                     </Button>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-white to-stone-50 border-2 border-stone-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <div className="flex items-center space-x-4 mb-4">
-                        <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl flex items-center justify-center border-2 border-blue-300">
-                          <Scan className="w-10 h-10 text-blue-700" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-stone-900 text-lg">Chest X-Ray</h4>
-                          <p className="text-stone-600">June 10, 2024</p>
-                          <Badge className="bg-green-200 text-green-900 border-green-400 mt-1">Normal</Badge>
-                        </div>
+                    {scans.length === 0 ? (
+                      <div className="p-6 bg-stone-50 border-2 border-stone-200 rounded-2xl text-center text-stone-600">
+                        No medical scans uploaded yet. Use the upload button above to add AES-256 encrypted X-Rays or lab scans.
                       </div>
-                      <p className="text-sm text-stone-700 mb-4">Routine chest examination shows clear lung fields with no abnormalities detected.</p>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="border-stone-400">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View PDF
-                        </Button>
-                        <Button size="sm" variant="outline" className="border-stone-400">
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-r from-white to-stone-50 border-2 border-stone-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <div className="flex items-center space-x-4 mb-4">
-                        <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center border-2 border-purple-300">
-                          <Heart className="w-10 h-10 text-purple-700" />
+                    ) : (
+                      scans.map((scanItem) => (
+                        <div key={scanItem.id} className="bg-gradient-to-r from-white to-stone-50 border-2 border-stone-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all">
+                          <div className="flex items-center space-x-4 mb-4">
+                            <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl flex items-center justify-center border-2 border-blue-300">
+                              <Scan className="w-8 h-8 text-blue-700" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-stone-900 text-lg">{scanItem.originalName}</h4>
+                              <p className="text-stone-600 text-sm">Uploaded: {new Date(scanItem.createdAt).toLocaleDateString()}</p>
+                              <Badge className="bg-emerald-100 text-emerald-900 border-emerald-300 mt-1">AES-256 Encrypted</Badge>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handleViewSecureDocument(scanItem.id)} className="border-stone-400">
+                              <Eye className="w-4 h-4 mr-2 text-amber-800" />
+                              View (Expiring Signed URL)
+                            </Button>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-bold text-stone-900 text-lg">ECG Report</h4>
-                          <p className="text-stone-600">May 25, 2024</p>
-                          <Badge className="bg-green-200 text-green-900 border-green-400 mt-1">Normal Rhythm</Badge>
-                        </div>
-                      </div>
-                      <p className="text-sm text-stone-700 mb-4">Electrocardiogram shows normal sinus rhythm with no signs of arrhythmia.</p>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="border-stone-400">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View PDF
-                        </Button>
-                        <Button size="sm" variant="outline" className="border-stone-400">
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -695,20 +774,9 @@ const Index = () => {
                   >
                     <div className="h-full bg-gradient-to-t from-stone-900/70 to-transparent rounded-2xl flex items-end p-6">
                       <div className="text-white">
-                        <h3 className="text-2xl font-bold mb-2">Digital Imaging</h3>
-                        <p className="text-stone-200">Advanced medical imaging and diagnostics</p>
+                        <h3 className="text-2xl font-bold mb-2">Digital Imaging Vault</h3>
+                        <p className="text-stone-200">Advanced medical imaging storage protected with HMAC signed access links.</p>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-gradient-to-br from-stone-100 to-stone-200 rounded-xl border-2 border-stone-300">
-                      <div className="text-2xl font-bold text-stone-900">15</div>
-                      <div className="text-sm text-stone-700 font-semibold">Total Scans</div>
-                    </div>
-                    <div className="text-center p-4 bg-gradient-to-br from-stone-100 to-stone-200 rounded-xl border-2 border-stone-300">
-                      <div className="text-2xl font-bold text-stone-900">100%</div>
-                      <div className="text-sm text-stone-700 font-semibold">Digital Storage</div>
                     </div>
                   </div>
                 </div>
@@ -717,34 +785,49 @@ const Index = () => {
           </Card>
         </section>
 
-        {/* Footer CTA */}
-        <div 
-          className="bg-gradient-to-r from-stone-100 to-stone-200 rounded-3xl border-3 border-stone-300 shadow-2xl p-10"
-          style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundBlendMode: 'overlay'
-          }}
-        >
-          <div className="bg-white/95 rounded-2xl p-8 text-center">
-            <h3 className="text-3xl font-bold text-stone-900 mb-4 font-serif">Take Control of Your Health Journey</h3>
-            <p className="text-lg text-stone-800 max-w-2xl mx-auto mb-6">
-              Join thousands who trust MediVault for secure, comprehensive health record management.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="bg-gradient-to-r from-stone-800 to-stone-900 hover:from-stone-900 hover:to-black text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg">
-                <Download className="w-5 h-5 mr-3" />
-                Download Health Summary
-              </Button>
-              <Button className="bg-gradient-to-r from-stone-700 to-stone-800 hover:from-stone-800 hover:to-stone-900 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg">
-                <Share className="w-5 h-5 mr-3" />
-                Share with Doctor
-              </Button>
-            </div>
-          </div>
-        </div>
       </div>
+
+      {/* Secure Expiring Signed URL Viewer Dialog */}
+      <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
+        <DialogContent className="max-w-3xl bg-stone-900 text-white border-amber-500/50">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-amber-400 flex items-center space-x-2">
+              <Key className="w-6 h-6 text-amber-400" />
+              <span>Secure Document Stream (Signed Token Verified)</span>
+            </DialogTitle>
+            <DialogDescription className="text-stone-300 text-sm">
+              This stream is decrypted on-the-fly and served using an HMAC-SHA256 expiring signed URL.
+            </DialogDescription>
+          </DialogHeader>
+
+          {signedDocData && (
+            <div className="space-y-4 pt-2">
+              <div className="bg-amber-950/60 border border-amber-500/40 p-4 rounded-xl space-y-2 text-xs font-mono">
+                <div className="flex justify-between items-center text-amber-200 font-sans text-sm font-semibold">
+                  <span className="flex items-center"><Clock className="w-4 h-4 mr-1.5 text-amber-400" /> URL Expiration:</span>
+                  <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/50">Valid for {signedDocData.ttlSeconds} seconds</Badge>
+                </div>
+                <div className="break-all text-stone-400 bg-black/40 p-2 rounded">
+                  <span className="text-amber-500 font-bold">Signed Stream Endpoint: </span>
+                  {signedDocData.signedUrl}
+                </div>
+                <div className="text-emerald-400 font-sans text-xs">
+                  ✓ AES-256 Decrypted server-side on-the-fly | Zero public bucket exposure.
+                </div>
+              </div>
+
+              {/* Document Display Frame */}
+              <div className="h-96 w-full bg-black rounded-xl overflow-hidden border border-stone-700 flex items-center justify-center">
+                <iframe 
+                  src={signedDocData.signedUrl} 
+                  className="w-full h-full border-none"
+                  title="Secure Encrypted Document Stream"
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

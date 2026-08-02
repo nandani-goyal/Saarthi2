@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prescription Template</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #333; margin: 40px; }
+        .header { border-bottom: 2px solid #2b5c8f; padding-bottom: 10px; margin-bottom: 20px; }
+        .clinic-name { font-size: 24px; font-weight: bold; color: #2b5c8f; }
+        .doctor-info { float: left; }
+        .prescription-date { float: right; font-weight: bold; }
+        .clear { clear: both; }
+        .patient-box { background-color: #f4f7f9; border: 1px solid #e1e8ed; padding: 15px; border-radius: 8px; margin-bottom: 30px; }
+        .patient-box table { width: 100%; border-collapse: collapse; }
+        .patient-box td { padding: 5px 10px; }
+        .section-title { font-size: 18px; font-weight: bold; color: #2b5c8f; border-bottom: 1px solid #e1e8ed; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; }
+        .med-list { margin-left: 0; padding-left: 0; list-style: none; }
+        .med-item { margin-bottom: 20px; padding: 10px; border-bottom: 1px dashed #e1e8ed; }
+        .med-name { font-size: 16px; font-weight: bold; color: #111; }
+        .med-instructions { font-size: 14px; color: #555; margin-top: 4px; }
+        .footer { margin-top: 80px; text-align: right; border-top: 1px solid #e1e8ed; padding-top: 20px; }
+        .signature-line { display: inline-block; width: 200px; border-top: 1px solid #333; margin-top: 40px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="doctor-info">
+            <div class="clinic-name">Saarthi Care Clinic</div>
+            <div><strong>Dr. Shyam Sharma</strong></div>
+            <div>MD - Internal Medicine Specialist</div>
+        </div>
+        <div class="prescription-date">
+            Date: 2026-08-02
+        </div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="patient-box">
+        <table>
+            <tr>
+                <td><strong>Patient Name:</strong> Nandani Goyal</td>
+                <td><strong>Age:</strong> 20</td>
+                <td><strong>Gender:</strong> Female</td>
+            </tr>
+            <tr>
+                <td><strong>BP:</strong> 120/80 mmHg</td>
+                <td><strong>Pulse:</strong> 72 bpm</td>
+                <td><strong>Weight:</strong> 60 kg</td>
+            </tr>
+        </table>
+    </div>
+
+    <div>
+        <div class="section-title">Rx (Chief Complaints)</div>
+        <p>Mild seasonal fever, dry cough, and nasal congestion.</p>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <div class="section-title">Medicines</div>
+        
+        <div class="med-item">
+            <span class="med-name">1. Paracetamol 500mg</span>
+            <div class="med-instructions">Dosage: 1 tablet - 1-0-1 (after meals) - Duration: 5 days</div>
+        </div>
+        
+        <div class="med-item">
+            <span class="med-name">2. Cetirizine 10mg</span>
+            <div class="med-instructions">Dosage: 1 tablet - 0-0-1 (before bedtime) - Duration: 5 days</div>
+        </div>
+
+        <div class="med-item">
+            <span class="med-name">3. Amoxicillin 500mg</span>
+            <div class="med-instructions">Dosage: 1 capsule - 1-0-1 (with food) - Duration: 7 days</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="signature-line">
+            <strong>Dr. Shyam Sharma</strong><br>
+            Authorized Signature
+        </div>
+    </div>
+
+</body>
+</html>
