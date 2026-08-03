@@ -18,7 +18,7 @@ _Unified hub for women’s health, safety, and support – elegant, secure, and 
 - 🧠 [**SymptoScan** – AI Symptom Checker for Women’s Health](https://saarthi2-167k.vercel.app/)
 - 🗣 [**CareCircle** – Peer & Emotional Support Chat Groups](https://carecircle-women-unite.vercel.app/)
 - 📜 [**HealthYojana** – Personalized Government Scheme Finder](https://health-yojana.vercel.app/)
-- 🛢 [**MediVault** – Store Your Prescriptions & Medical Records](https://medi-safe-journal-vault.vercel.app/)
+- 🛢 [**MediVault** – Store Your Prescriptions & Medical Records](https://saarthi2-medivault.vercel.app/)
 - 🩸 [**SheCare** – Track Your Periods, Symptoms & Flow](https://feminine-she-care-vpg6.vercel.app/)
 - 🩺 [**GynoConnect** – Find & Consult Verified Gynecologists]
 
