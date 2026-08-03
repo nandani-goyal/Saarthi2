@@ -235,7 +235,11 @@ app.get('/api/documents/:id/signed-url', async (req, res) => {
 
     // Generate token with 15-minute expiration
     const { token, expiresAt } = generateSignedToken(id, 900);
-    const signedUrl = `http://localhost:${PORT}/api/documents/stream?token=${token}`;
+    
+    // Dynamically detect hosting domain and protocol (https / http)
+    const host = req.get('host') || `localhost:${PORT}`;
+    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const signedUrl = `${protocol}://${host}/api/documents/stream?token=${token}`;
 
     res.json({
       documentId: id,

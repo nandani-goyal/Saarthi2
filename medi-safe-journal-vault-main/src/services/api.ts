@@ -1,4 +1,9 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+// Safely parse VITE_API_URL and ensure it ends with '/api' if it starts with http
+let parsedBase = import.meta.env.VITE_API_URL || '/api';
+if (parsedBase.startsWith('http') && !parsedBase.endsWith('/api')) {
+  parsedBase = `${parsedBase.replace(/\/$/, '')}/api`;
+}
+const API_BASE = parsedBase;
 
 export interface Medicine {
   _id?: string;
