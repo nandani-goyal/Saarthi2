@@ -30,7 +30,7 @@ const Dashboard = ({ userName }: DashboardProps) => {
       progress: 70,
       lastUsed: "5 days ago",
       color: "from-blue-400 to-cyan-500",
-      link: "https://symptoscan-2mg1.onrender.com/",
+      link: "https://saarthi2-167k.vercel.app/",
       used: true
     },
     {

@@ -5,8 +5,9 @@
 ## 🚀 Live Deployment
 
 ### 🌐 Saarthi – One-Stop Digital Empowerment Platform for Women
+
 🔗 [Saarthi Landing Page](https://saarthi-empower-hub-revamp.vercel.app/)  
-*Unified hub for women’s health, safety, and support – elegant, secure, and accessible.*
+_Unified hub for women’s health, safety, and support – elegant, secure, and accessible._
 
 ---
 
@@ -20,7 +21,6 @@
 - 🛢 [**MediVault** – Store Your Prescriptions & Medical Records](https://medi-safe-journal-vault.vercel.app/)
 - 🩸 [**SheCare** – Track Your Periods, Symptoms & Flow](https://feminine-she-care-vpg6.vercel.app/)
 - 🩺 [**GynoConnect** – Find & Consult Verified Gynecologists]
-
 
 ---
 
@@ -74,7 +74,7 @@ A unified platform to **bridge the gap in women's healthcare** by offering perso
 - Decision-tree + AI-powered symptom analysis
 - Shows urgency levels and suggestions
 
-🔗 \***\*Live Demo:** [https://symptoscan-2mg1.onrender.com/](https://symptoscan-2mg1.onrender.com/)
+🔗 \***\*Live Demo:** [https://symptoscan-2mg1.onrender.com/](https://saarthi2-167k.vercel.app/)
 
 ### Carecircle -Peer & Emotional Support Hub
 
@@ -106,18 +106,20 @@ A unified platform to **bridge the gap in women's healthcare** by offering perso
 🔗 \***\*Live Demo:** [https://medi-safe-journal-vault.vercel.app/](https://medi-safe-journal-vault.vercel.app/)
 
 ### SheCare-Your personalized period tracker
+
 ✨ Track your cycle, understand your body, and take control of your health.
 
 ✨ Also provides-Cycle Statistics,Cycle tips and insights and All Cycle Phases Overview.
 
 ✨ Builds Cycle Pattern and gives reminders.
 
-🔗 \***\*Live Demo:** [(https://feminine-she-care-vpg6.vercel.app/)](https://feminine-she-care-vpg6.vercel.app/)
----
+## 🔗 \***\*Live Demo:** [(https://feminine-she-care-vpg6.vercel.app/)](https://feminine-she-care-vpg6.vercel.app/)
 
-###  [**GynoConnect** – Find & Consult Verified Gynecologists]
+### [**GynoConnect** – Find & Consult Verified Gynecologists]
+
 ✨ Search your nearby gynocologist
 -was not able to deploy it
+
 ---
 
 🛠️ **Status:** Frontend UI complete and deployed  
